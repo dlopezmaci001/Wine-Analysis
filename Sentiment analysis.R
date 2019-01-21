@@ -20,13 +20,13 @@ library(reshape2)
 
 # Load File
 
-df <- read.csv2("C:/Users/Daniel/Desktop/Nimerya/Vinos/Vinos comentados.csv")
+df <- read.csv2("YOUR PATH/"Vinos comentados.csv")
 
 df <- df[complete.cases(df),]
 
 # Transform variables
 
-df$country <- NULL # Todos los vinos son de españa
+df$country <- NULL # All wines are Spanish
 
 df$description <- as.character(df$description)
 
@@ -59,13 +59,13 @@ word_counts %>%
   geom_col(fill="brown2")+
   scale_y_continuous(labels = comma_format())+
   coord_flip()+
-  labs(title = "Palabras más usadas",
+  labs(title = "Palabras mÃ¡s usadas",
        subtitle = "De los 6.221 comentarios,conectores eliminados",
-       y= "Nº Veces que aparece la palabra")
+       y= "NÂº Veces que aparece la palabra")
 
-# Buenos resultados
+# Good results
 
-# Procederemos a agrupar las palabras por sus infitivos
+# Group words by their stem
 
 word_counts %>%
   head(25) %>%
@@ -75,11 +75,11 @@ word_counts %>%
   geom_col(fill="brown2")+
   scale_y_continuous(labels = comma_format())+
   coord_flip()+
-  labs(title="Palabras más usadas",
+  labs(title="Palabras mÃ¡s usadas",
        subtitle="De los 6.221 comentarios, conectores eliminados y agregadas por infimitivo",
-       y= "Nº de veces que aparece la palabra")
+       y= "NÂº de veces que aparece la palabra")
 
-# Cuales son las palabras que más aparecen juntas
+# Which words appear together most often
 
 review_bigrams <- df %>%
   unnest_tokens(bigram,description,token="ngrams",n=2)
@@ -94,7 +94,7 @@ bigrams_filtered <- bigrams_separated %>%
 bigrams_counts <- bigrams_filtered %>%
   count(word1,word2,sort = TRUE)
 
-# Las palabras más utilizadas son berry aromas y fruit flavours
+# Most used words: berry aromas y fruit flavours
 
 bigrams_united <- bigrams_filtered %>%
   unite(bigram, word1, word2, sep = " ")
@@ -127,7 +127,7 @@ title_word_pairs %>%
   ggtitle('Word network reviews vinos')
 theme_void()
 
-# Veamos cuales son los trigrams mas comunes
+# Most common trigrams
 
 review_trigrams <- df %>%
   unnest_tokens(trigram, description, token = "ngrams", n = 3)
@@ -180,7 +180,7 @@ bing_word_counts %>%
   coord_flip() + 
   ggtitle('Words that contribute to positive and negative sentiment in the reviews')
 
-# Prueba con otra libraria a ver que resultados salen
+# Try other libraries
 
 contributions <- tidy_reviews %>%
   inner_join(get_sentiments("afinn"), by = "word") %>%
@@ -198,14 +198,12 @@ contributions %>%
   coord_flip()
 
 # Let's introduce more context by using bigrams
-# Las palabras como NOT pueden cambiar la manera en la que se entiende
-# el contexto, por ejemplo en clean
 
 bigrams_separated %>%
   filter(word1 == "not") %>%
   count(word1, word2, sort = TRUE)
 
-# No salen resultados convincentes
+# Not convincing results
 
 AFINN <- get_sentiments("afinn")
 
@@ -216,11 +214,6 @@ not_words <- bigrams_separated %>%
   ungroup()
 
 not_words
-
-# Lo que nos muestra esto es como la palabra not suma o resta al sentimetn result
-# por ejemplo si not va delante de terribly es bueno, resta -3
-
-# Usando esta info, que palabras restan mas al sentiment analysis
 
 not_words %>%
   mutate(contribution = n * score) %>%
@@ -235,10 +228,7 @@ not_words %>%
           sentiment scores, positive or negative direction') +
   coord_flip()
 
-# Como vemos la palabra terribly restaba mucho, pero al ir precedida de not, no eran tan malo
-# en cambio worth se consideraba como bueno cuando debía ser al contrario.
-
-# Palabras que mas se usan para negaciones 
+#Negation common words
 
 negation_words <- c("not", "no", "never", "without")
 
@@ -263,7 +253,7 @@ negated_words %>%
           such as "no", "not", "never" and "without"') +
   coord_flip()
 
-# Analicemos los comentarios mas positivos y negativos
+# Analisis of most positive and negative comments
 
 sentiment_messages <- tidy_reviews %>%
   inner_join(get_sentiments("afinn"), by = "word") %>%
@@ -276,41 +266,14 @@ sentiment_messages <- tidy_reviews %>%
 sentiment_messages %>%
   arrange(desc(sentiment))
 
-# El comentario mas positivo es:
+# Best comment:
 
 df[ which(df$ID==2006), ]$description[1]
 
 sentiment_messages %>%
   arrange(sentiment)
 
-# El peor comentario es:
+# Worst comment:
 
 df[ which(df$ID==3975), ]$description[1]
 
-# Hagamos unos analisis.
-
-# Primero unimos los datasets con el sentimiento por review
-
-df_sent <-  df %>%
-  inner_join(sentiment_messages, by = "ID") %>%
-  group_by(ID)
-
-# Correlacion entre grade y precio
-
-cor.test(df_sent$price,df_sent$points)
-
-# There does not seem to be a relation between price and points
-
-cor.test(df_sent$points,df_sent$sentiment)
-
-# There seems to be a correlation between the sentiment and points
-
-plot(df_sent$sentiment,df_sent$points)
-
-###############################################################
-
-wine_sentiment <- df %>%
-  inner_join(get_sentiments("bing")) %>%
-  count(word, index = linenumber %/% 80, sentiment) %>%
-  spread(sentiment, n, fill = 0) %>%
-  mutate(sentiment = positive - negative)
